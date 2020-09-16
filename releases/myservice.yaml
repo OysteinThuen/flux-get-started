@@ -8,7 +8,7 @@ metadata:
     fluxcd.io/automated: "false"
     fluxcd.io/tag.chart-image: semver:~4.0
 spec:
-  releaseName: mongodb
+  releaseName: elvia-deployment
   chart:
     git: git@github.com:3lvia/kubernetes-charts
     ref: master
