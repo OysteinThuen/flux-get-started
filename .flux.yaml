@@ -1,5 +1,5 @@
 version: 1 # must be `1`
 patchUpdated:
   generators:
-  - command: echo "root running .flux.yaml!"
+  - command: cat mongodb.yaml 2>/dev/null
   patchFile: flux-patch.yaml
