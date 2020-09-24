@@ -1,5 +1,5 @@
 version: 1 # must be `1`
 patchUpdated:
   generators:
-  - command: echo "root running .flux.yaml!"
+  - command: echo "release running .flux.yaml!"
   patchFile: flux-patch.yaml
