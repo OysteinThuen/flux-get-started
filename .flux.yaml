@@ -1,5 +1,7 @@
 version: 1 # must be `1`
 patchUpdated:
   generators:
-  - command: cat */mongodb.yaml
+  - command: >
+      cat */mongodb.yaml 
+      cat */redis.yaml
   patchFile: flux-patch.yaml
