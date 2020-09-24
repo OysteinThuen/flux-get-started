@@ -1,0 +1,7 @@
+releases/ghost.prod.yaml
+releases/ghost.prod.yaml
+releases/mongodb.yaml
+releases/myservice.release.yaml
+releases/myservice.yaml
+releases/redis-auth.yaml
+releases/redis.yaml
