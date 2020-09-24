@@ -2,3 +2,4 @@ version: 1 # must be `1`
 patchUpdated:
   generators:
   - command: echo "running .flux.yaml!"
+  patchFile: flux-patch.yaml
