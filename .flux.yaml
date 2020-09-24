@@ -2,6 +2,7 @@ version: 1 # must be `1`
 patchUpdated:
   generators:
   - command: |
-      cat $(find releases/ -regex ".*\/+[a-zA-Z0-9_\-]+\.yaml") # any *.yaml-files with a single dot
+      cat $(find releases/ -type f -regex "\(.*\/\)*[a-zA-Z0-9_\-]*\.yaml$") # any *.yaml-files with a single dot
       cat $(find releases/ -type f -name "*.prod.yaml") # any *.prod.yaml-files
   patchFile: flux-patch.yaml
+

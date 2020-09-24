@@ -48,3 +48,7 @@ If you have any questions about, feedback for or problems with `flux-get-started
 - [File an issue.](https://github.com/fluxcd/flux/issues/new)
 
 Your feedback is always welcome!
+
+
+helm upgrade -i flux fluxcd/flux    --set git.url=git@github.com:OysteinThuen/flux-get-started --set allowedNamespaces={demo} --set clusterRole.create=false --set git.pollInterval=10s -n flux --set sync.interval=5m --set manifestGeneration=true  --set syncGarbageCollection.enabled=true
+
