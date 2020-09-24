@@ -1,0 +1,232 @@
+---
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: mongodb
+  namespace: demo
+  annotations:
+    fluxcd.io/automated: "false"
+    fluxcd.io/tag.chart-image: semver:~4.0
+spec:
+  releaseName: mongodb
+  chart:
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    name: mongodb
+    version: 7.6.3
+  values:
+    image:
+      repository: bitnami/mongodb
+      tag: 4.4
+    usePassword: false
+    persistence:
+      enabled: false
+    securityContext:
+      enabled: true
+---
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: myservice
+  namespace: demo
+  annotations:
+    fluxcd.io/automated: "false"
+    fluxcd.io/tag.chart-image: semver:~4.0
+spec:
+  releaseName: elvia-deployment
+  chart:
+    git: https://github.com/3lvia/kubernetes-charts
+    ref: master
+    path: elvia-deployment
+  values:
+    image:
+      repository: bitnami/mongodb
+      tag: 4.4
+    name: myservice
+    namespace: demo
+---
+# This secret should be stored in Git encrypted
+# Sealed Secrets example: https://github.com/stefanprodan/gitops-helm#managing-kubernetes-secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-auth
+  namespace: demo
+data:
+  values.yaml: cGFzc3dvcmQ6IGFkbWlu
+---
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: redis
+  namespace: demo
+  annotations:
+    fluxcd.io/automated: "true"
+    fluxcd.io/tag.chart-image: semver:~5.0
+    fluxcd.io/locked: "true"
+    fluxcd.io/locked_msg: "Halt updates for now"
+    fluxcd.io/locked_user: "Stefan Prodan <stefan@weave.works>"
+spec:
+  releaseName: redis
+  chart:
+    repository: https://kubernetes-charts.storage.googleapis.com/
+    name: redis
+    version: 10.3.1
+  valueFileSecrets:
+    # the redis-auth secret contains the password value
+    - name: redis-auth
+  values:
+    usePassword: true
+    image:
+      repository: bitnami/redis
+      tag: 5.0.9
+    service:
+      type: ClusterIP
+      port: 6379
+    cluster:
+      enabled: false
+    master:
+      securityContext:
+        enabled: false
+      persistence:
+        enabled: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: demo
+  labels:
+    app: podinfo
+  annotations:
+    fluxcd.io/automated: "true"
+    fluxcd.io/tag.init: regex:^3.10.*
+    fluxcd.io/tag.podinfod: semver:~3.1
+spec:
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: podinfo
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9797"
+      labels:
+        app: podinfo
+    spec:
+      initContainers:
+      - name: init
+        image: alpine:3.10
+        command:
+        - sleep
+        - "1"
+      containers:
+      - name: podinfod
+        image: stefanprodan/podinfo:3.1.5
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 9898
+          protocol: TCP
+        - name: http-metrics
+          containerPort: 9797
+          protocol: TCP
+        - name: grpc
+          containerPort: 9999
+          protocol: TCP
+        command:
+        - ./podinfo
+        - --port=9898
+        - --port-metrics=9797
+        - --grpc-port=9999
+        - --grpc-service-name=podinfo
+        - --level=info
+        - --random-delay=false
+        - --random-error=false
+        env:
+        - name: PODINFO_UI_COLOR
+          value: "#34577c"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 9898
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 9898
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: podinfo
+  namespace: demo
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: podinfo
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      # scale up if usage is above
+      # 99% of the requested CPU (10m)
+      targetAverageUtilization: 99
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  namespace: demo
+  labels:
+    app: podinfo
+spec:
+  type: ClusterIP
+  selector:
+    app: podinfo
+  ports:
+  - name: http
+    port: 9898
+    protocol: TCP
+    targetPort: http
+---
+apiVersion: helm.fluxcd.io/v1
+kind: HelmRelease
+metadata:
+  name: ghost
+  namespace: demo
+  annotations:
+    fluxcd.io/automated: "false"
+    fluxcd.io/tag.chart-image: glob:3.1.1-debian-9-*
+spec:
+  releaseName: ghost
+  chart:
+    git: ssh://git@github.com/OysteinThuen/flux-get-started
+    ref: master
+    path: charts/ghost
+  values:
+    image:
+      repository: bitnami/ghost
+      tag: 3.1.1-debian-9-r0
+    persistence:
+      enabled: false
+    resources:
+      requests:
+        memory: 32Mi
+        cpu: 10m
+    service:
+      type: ClusterIP
+    mariadb:
+      master:
+        persistence:
+          enabled: false
