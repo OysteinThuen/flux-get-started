@@ -1,0 +1,103 @@
+---
+# Source: elvia-deployment/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: myservice-elvia-deployment
+  labels:
+    helm.sh/chart: elvia-deployment-0.1.0
+    app.kubernetes.io/name: elvia-deployment
+    app.kubernetes.io/instance: myservice
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: elvia-deployment/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: myservice-elvia-deployment
+  labels:
+    helm.sh/chart: elvia-deployment-0.1.0
+    app.kubernetes.io/name: elvia-deployment
+    app.kubernetes.io/instance: myservice
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: elvia-deployment
+    app.kubernetes.io/instance: myservice
+---
+# Source: elvia-deployment/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myservice
+  namespace: demo
+  labels:
+    helm.sh/chart: elvia-deployment-0.1.0
+    app.kubernetes.io/name: elvia-deployment
+    app.kubernetes.io/instance: myservice
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: elvia-deployment
+      app.kubernetes.io/instance: myservice
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: elvia-deployment
+        app.kubernetes.io/instance: myservice
+    spec:
+      serviceAccountName: myservice-elvia-deployment
+      securityContext:
+        {}
+      containers:
+        - name: elvia-deployment
+          securityContext:
+            {}
+          image: "bitnami/mongodb:4.4"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {}
+---
+# Source: elvia-deployment/templates/tests/test-connection.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "myservice-elvia-deployment-test-connection"
+  labels:
+    helm.sh/chart: elvia-deployment-0.1.0
+    app.kubernetes.io/name: elvia-deployment
+    app.kubernetes.io/instance: myservice
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['myservice-elvia-deployment:80']
+  restartPolicy: Never
